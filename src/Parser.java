@@ -35,13 +35,11 @@ public class Parser {
 
         scanner.nextLine();
 
-
         for (int r = 0; r < rows; r++){
             for (int c = 0; c < cols; c++){
+                List<Instruction> instructions = new ArrayList<>();
 
                 while (scanner.hasNextLine()){
-
-                    List<Instruction> instructions = new ArrayList<>();
 
                     String line = scanner.nextLine().trim();
                     String[] words = line.split("\\s+");
@@ -75,13 +73,13 @@ public class Parser {
 
                     // add instruction to map with correct position
                     instructions.add(instruction);
-                    Silo silo = new Silo(instructions);
-                    grid[r][c] = silo;
-
                 }
+                Silo silo = new Silo(instructions);
+                grid[r][c] = silo;
             }
-            scanner.nextLine();
         }
+        scanner.nextLine();
+
         return grid;
     }
 

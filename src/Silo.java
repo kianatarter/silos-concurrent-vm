@@ -8,6 +8,10 @@ import java.util.Map;
  *
  */
 public class Silo {
+    private List<Instruction> instructions;
+    private int ACC = 0;
+    private int BAK = 0;
+    private int PC = 0;
 
 
     /**
@@ -15,6 +19,16 @@ public class Silo {
      * @param instructions the program instructions for a single silo
      */
     public Silo(List<Instruction> instructions){
+        this.instructions = instructions;
 
+    }
+
+    public List<Instruction> getInstructions(){
+        return instructions;
+    }
+
+    @Override
+    public String toString(){
+        return "Silo[" + instructions.size() + " instructions]";
     }
 }

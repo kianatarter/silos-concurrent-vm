@@ -12,8 +12,14 @@ public class Main {
     public static void main(String[] args) {
         try {
             Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
-            Parser.parse(scanner);
+            Silo[][] grid = Parser.parse(scanner);
 
+            // TESTING IGNORE FOR NOW
+            Silo silo = grid[0][0];
+            System.out.println(silo);
+            System.out.println(silo.getInstructions());
+
+            scanner.close();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
