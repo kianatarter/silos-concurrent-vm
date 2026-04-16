@@ -10,14 +10,12 @@ import java.util.*;
 public class Parser {
 
 
-    public Parser() {
-
-    }
-
     /**
-     * Main method to parse the input files
+     * Main method used to parse test files
+     * @param scanner scanner to get data from file
+     * @return a Puzzle object with silo program and data, and input/output streams
      */
-    public static Silo[][] parse(Scanner scanner){
+    public static Puzzle parse(Scanner scanner){
         String title = scanner.nextLine().trim();
         String description = scanner.nextLine().trim();
 
@@ -78,9 +76,68 @@ public class Parser {
                 grid[r][c] = silo;
             }
         }
+        // close grid parsing
         scanner.nextLine();
 
-        return grid;
-    }
+        // create maps for stream title + stream data
+        Map<String, Stream> inputMap = new HashMap<>();
+        Map<String, Stream> outputMap = new HashMap<>();
 
+
+        while (scanner.hasNextLine()){
+            String next = scanner.nextLine().trim();
+
+            // skip empty lines
+            if (next.isEmpty()){
+                continue;
+            }
+
+            // move onto building output stream
+            if (next.equals("END")){
+                break;
+            }
+
+            if (next.startsWith("INPUT")){
+                String inputTitle = next;
+                int row = scanner.nextInt();
+                int col = scanner.nextInt();
+                scanner.nextLine();
+
+                List<Integer> inputValues = new ArrayList<>();
+                while(scanner.hasNextLine()){
+                    String value = scanner.nextLine().trim();
+                    if (value.equals("END")){
+                        break; // end this stream
+                    }
+
+                    inputValues.add(Integer.parseInt(value));
+                }
+                Stream inputStream = new Stream(inputTitle, row, col, inputValues);
+                inputMap.put(inputTitle, inputStream);
+
+
+            } else if (next.startsWith("OUTPUT")){
+                String outputTitle = next;
+                int row = scanner.nextInt();
+                int col = scanner.nextInt();
+                scanner.nextLine();
+
+                List<Integer> outputValues = new ArrayList<>();
+                while(scanner.hasNextLine()){
+                    String value = scanner.nextLine().trim();
+                    if (value.equals("END")){
+                        break; // end this stream
+                    }
+                    outputValues.add(Integer.parseInt(value));
+                }
+                Stream outputStream = new Stream(outputTitle, row, col, outputValues);
+                outputMap.put(outputTitle, outputStream);
+
+            }
+        }
+        Puzzle puzzle = new Puzzle(title, description, grid, inputMap, outputMap);
+        return puzzle;
+    }
 }
+
+

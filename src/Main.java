@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -12,12 +13,40 @@ public class Main {
     public static void main(String[] args) {
         try {
             Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
-            Silo[][] grid = Parser.parse(scanner);
+            Puzzle puzzle = Parser.parse(scanner);
 
-            // TESTING IGNORE FOR NOW
-            Silo silo = grid[0][0];
-            System.out.println(silo);
-            System.out.println(silo.getInstructions());
+
+            System.out.println("=== PUZZLE PARSED ===");
+            System.out.println("Title: " + puzzle.title);
+            System.out.println("Description: " + puzzle.description);
+            System.out.println("Grid: " + puzzle.grid.length + "x" + puzzle.grid[0].length);
+
+            System.out.println("\n=== ALL SILOS ===");
+            for (int r = 0; r < puzzle.grid.length; r++) {
+                for (int c = 0; c < puzzle.grid[r].length; c++) {
+                    System.out.println("Silo (" + r + "," + c + "): " + puzzle.grid[r][c]);
+
+                    // Print the actual instructions
+                    List<Instruction> program = puzzle.grid[r][c].getInstructions();
+                    for (Instruction inst : program) {
+                        System.out.println("  " + inst);
+                    }
+                }
+            }
+            System.out.println("\n=== INPUT STREAMS ===");
+            for (String name : puzzle.inputs.keySet()) {
+                Stream stream = puzzle.inputs.get(name);
+                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
+                        ") with " + stream.values().size() + " values");
+            }
+
+            System.out.println("\n=== OUTPUT STREAMS ===");
+            for (String name : puzzle.outputs.keySet()) {
+                Stream stream = puzzle.outputs.get(name);
+                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
+                        ") expecting " + stream.values().size() + " values");
+            }
+
 
             scanner.close();
         } catch (FileNotFoundException e) {
