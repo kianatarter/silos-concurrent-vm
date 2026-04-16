@@ -4,5 +4,6 @@
  *
  *
  */
-public class Instruction {
+public record Instruction (String type, String arg1, String arg2) {
+
 }
