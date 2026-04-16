@@ -1,3 +1,8 @@
+import Logic.Instruction;
+import Logic.Puzzle;
+import Logic.Stream;
+import Parser.Parser;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
@@ -24,7 +29,7 @@ public class Main {
             System.out.println("\n=== ALL SILOS ===");
             for (int r = 0; r < puzzle.grid.length; r++) {
                 for (int c = 0; c < puzzle.grid[r].length; c++) {
-                    System.out.println("Silo (" + r + "," + c + "): " + puzzle.grid[r][c]);
+                    System.out.println("Logic.Silo (" + r + "," + c + "): " + puzzle.grid[r][c]);
 
                     // Print the actual instructions
                     List<Instruction> program = puzzle.grid[r][c].getInstructions();

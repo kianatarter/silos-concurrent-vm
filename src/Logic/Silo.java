@@ -1,5 +1,6 @@
+package Logic;
+
 import java.util.List;
-import java.util.Map;
 
 /**
  * CS 351L Project 4: Silos
@@ -15,7 +16,7 @@ public class Silo {
 
 
     /**
-     * Constructor for creating a Silo with instructions
+     * Constructor for creating a Logic.Silo with instructions
      * @param instructions the program instructions for a single silo
      */
     public Silo(List<Instruction> instructions){
@@ -29,6 +30,6 @@ public class Silo {
 
     @Override
     public String toString(){
-        return "Silo[" + instructions.size() + " instructions]";
+        return "Logic.Silo[" + instructions.size() + " instructions]";
     }
 }

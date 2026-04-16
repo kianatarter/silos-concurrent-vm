@@ -1,3 +1,10 @@
+package Parser;
+
+import Logic.Instruction;
+import Logic.Puzzle;
+import Logic.Silo;
+import Logic.Stream;
+
 import java.util.*;
 
 
@@ -12,8 +19,9 @@ public class Parser {
 
     /**
      * Main method used to parse test files
+     *
      * @param scanner scanner to get data from file
-     * @return a Puzzle object with silo program and data, and input/output streams
+     * @return a Logic.Puzzle object with silo program and data, and input/output streams
      */
     public static Puzzle parse(Scanner scanner){
         String title = scanner.nextLine().trim();
