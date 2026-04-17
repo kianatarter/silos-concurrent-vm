@@ -8,7 +8,8 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import java.awt.*;
+
+import javafx.scene.control.Button;
 
 
 public class MainWindow extends Application {
@@ -33,7 +34,7 @@ public class MainWindow extends Application {
                 // create column to hold registers
                 HBox registerBox = new HBox(12);
                 registerBox.getStyleClass().add("registers-section");
-                registerBox.setMaxWidth(Double.MAX_VALUE);
+              //  registerBox.setMaxWidth(Double.MAX_VALUE);
                 registerBox.setAlignment(Pos.CENTER);
 
                 // create column to hold instructions
@@ -66,15 +67,36 @@ public class MainWindow extends Application {
             }
         }
 
-        VBox controls = new VBox(5);
-        Label controlTitle = new Label("CONTROLS");
-        controls.setAlignment(Pos.BASELINE_LEFT);
-        controls.setPadding(new Insets(0, 0, 300, 0));
+        VBox streamsPanel = new VBox(5);
+        streamsPanel.getStyleClass().add("controls");
+        streamsPanel.setPadding(new Insets(20));
+        streamsPanel.setAlignment(Pos.TOP_CENTER);
+
+        Label streamsTitle = new Label("I/O STREAMS");
+        streamsTitle.getStyleClass().add("silo-register");
+
+        streamsPanel.getChildren().addAll(streamsTitle);
+        root.setLeft(streamsPanel);
+        BorderPane.setMargin(streamsPanel, new Insets(20));
+
+        VBox controls = new VBox(15);
+        controls.setAlignment(Pos.CENTER);
+        controls.setPadding(new Insets(20));
+
+        Button start = new Button("START ▶");
+        start.getStyleClass().add("control-button");
+
+        Button pause = new Button("PAUSE ⏸");
+        pause.getStyleClass().add("control-button");
+
+        Button stop = new Button("STOP ⃠");
+        stop.getStyleClass().add("control-button");
+
         controls.getStyleClass().add("controls");
+        controls.getChildren().addAll(start, pause, stop);
+        streamsPanel.getChildren().add(controls);
 
-        root.setLeft(controls);
-        BorderPane.setAlignment(controls, Pos.CENTER);
-
+        root.setLeft(streamsPanel);
         root.setCenter(silos);
 
         BorderPane.setAlignment(silos, Pos.CENTER);

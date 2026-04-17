@@ -5,14 +5,14 @@
     -fx-min-width: 220px;
     -fx-max-width: 220px;
     -fx-min-height: 190px;
-    -fx-padding: 20;
+    -fx-padding: 12;
 
      -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
 }
 
 .controls {
     -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #667eea 0%, #764ba2 100%);
-    -fx-border-color: #a855f7;
+    -fx-border-color: white;
     -fx-border-width: 2;
     -fx-min-width: 200px;
     -fx-max-width: 200px;
@@ -32,9 +32,8 @@
 .registers-section {
     -fx-background-color: rgba(168, 85, 247, 0.15);
     -fx-background-radius: 8;
-    -fx-padding: 10;
-    -fx-spacing: 15;
-    -fx-pref-width: 100%;
+    -fx-padding: 8 10;
+    -fx-spacing: 8;
 
 }
 
@@ -56,4 +55,25 @@
     -fx-font-weight: bold;
     -fx-font-family: "Monaco", monospace;
 
+}
+
+/* Control Buttons */
+.control-button {
+    -fx-background-color: linear-gradient(to bottom, #667eea, #764ba2);
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Monaco", monospace;
+    -fx-padding: 12 25;
+    -fx-border-color: #a855f7;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-min-width: 110px;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.5), 15, 0.4, 0, 0);
+}
+
+.control-button: hover {
+    -fx-effect: dropshadow(gaussian, white, 20, 0.6, 0, 0);
 }
