@@ -1,0 +1,12 @@
+Interpreter Test
+Testing basic instructions
+GRID
+1 1
+ADD 5
+ADD 3
+NEGATE
+SAVE
+SWAP
+END
+END
+END

@@ -1,6 +1,4 @@
-import Logic.Instruction;
-import Logic.Puzzle;
-import Logic.Stream;
+import Logic.*;
 import Parser.Parser;
 
 import java.io.File;
@@ -17,8 +15,23 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         try {
-            Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
+            //Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
+            Scanner scanner = new Scanner(new File("test_input/test_input.txt"));
             Puzzle puzzle = Parser.parse(scanner);
+
+            // Testing
+            Silo silo = puzzle.grid[0][0];
+            Interpreter interp = new Interpreter(silo);
+            List<Instruction> instructions = silo.getInstructions();
+
+            System.out.println("Starting: ACC=" + silo.getACC() + " BAK=" + silo.getBAK());
+
+            for (int i = 0; i < instructions.size(); i++) {
+                Instruction inst = instructions.get(silo.getPC());
+                System.out.println("Executing: " + inst);
+                interp.executeOneInstruction(inst);
+                System.out.println("After: ACC=" + silo.getACC() + " BAK=" + silo.getBAK() + " PC=" + silo.getPC());
+            }
 
 
             System.out.println("=== PUZZLE PARSED ===");
