@@ -1,7 +1,7 @@
-import Logic.Instruction;
-import Logic.Puzzle;
-import Logic.Stream;
-import Parser.Parser;
+import logic.Instruction;
+import logic.Puzzle;
+import logic.Stream;
+import parser.Parser;
 
 import java.io.File;
 import java.io.FileNotFoundException;

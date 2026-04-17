@@ -1,4 +1,4 @@
-package Logic;
+package logic;
 
 /**
  * CS 351L Project 4: Silos

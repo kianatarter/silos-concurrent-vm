@@ -1,9 +1,9 @@
-package Parser;
+package parser;
 
-import Logic.Instruction;
-import Logic.Puzzle;
-import Logic.Silo;
-import Logic.Stream;
+import logic.Instruction;
+import logic.Puzzle;
+import logic.Silo;
+import logic.Stream;
 
 import java.util.*;
 
