@@ -10,6 +10,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.geometry.Pos;
 
+import java.awt.*;
+
 
 public class MainWindow extends Application {
 
@@ -20,10 +22,10 @@ public class MainWindow extends Application {
 
         GridPane silos = new GridPane();
         silos.setAlignment(Pos.CENTER);
-        silos.setPadding(new Insets(10, 0, 0, 300));
+        silos.setPadding(new Insets(10, 0, 0, 200));
 
-        silos.setHgap(15);
-        silos.setVgap(15);
+        silos.setHgap(60);
+        silos.setVgap(60);
         for (int r = 0; r < 3; r++){
             for (int c = 0; c < 3; c++){
                 VBox silo = new VBox(30);
@@ -33,6 +35,7 @@ public class MainWindow extends Application {
         }
 
         VBox controls = new VBox(5);
+        Label controlTitle = new Label("CONTROLS");
         controls.setAlignment(Pos.BASELINE_LEFT);
         controls.setPadding(new Insets(0, 0, 300, 0));
         controls.getStyleClass().add("controls");

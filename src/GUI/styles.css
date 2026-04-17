@@ -2,9 +2,9 @@
     -fx-background-color: #1a1a1a;
     -fx-border-color: #a855f7;
     -fx-border-width: 2;
-    -fx-min-width: 230px;
-    -fx-max-width: 230px;
-    -fx-min-height: 250px;
+    -fx-min-width: 210px;
+    -fx-max-width: 210px;
+    -fx-min-height: 230px;
     -fx-padding: 20;
 
      -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
@@ -19,4 +19,12 @@
     -fx-min-height: 400px;
     -fx-max-height: 400px;
     -fx-padding: 20
+}
+
+.control-title {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Monaco", monospace;
+    -fx-padding: 0 0 10 0;
 }
