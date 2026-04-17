@@ -80,7 +80,7 @@ public class MainWindow extends Application {
         BorderPane.setMargin(streamsPanel, new Insets(20));
 
         VBox controls = new VBox(15);
-        controls.setAlignment(Pos.CENTER);
+        controls.setAlignment(Pos.BOTTOM_CENTER);
         controls.setPadding(new Insets(20));
 
         Button start = new Button("START ▶");
@@ -98,6 +98,7 @@ public class MainWindow extends Application {
 
         root.setLeft(streamsPanel);
         root.setCenter(silos);
+
 
         BorderPane.setAlignment(silos, Pos.CENTER);
 

@@ -16,8 +16,8 @@
     -fx-border-width: 2;
     -fx-min-width: 200px;
     -fx-max-width: 200px;
-    -fx-min-height: 400px;
-    -fx-max-height: 400px;
+    -fx-min-height: 800px;
+    -fx-max-height: 800px;
     -fx-padding: 20
 }
 
