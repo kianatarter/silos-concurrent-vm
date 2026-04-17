@@ -2,9 +2,9 @@
     -fx-background-color: #1a1a1a;
     -fx-border-color: #a855f7;
     -fx-border-width: 2;
-    -fx-min-width: 210px;
-    -fx-max-width: 210px;
-    -fx-min-height: 230px;
+    -fx-min-width: 220px;
+    -fx-max-width: 220px;
+    -fx-min-height: 190px;
     -fx-padding: 20;
 
      -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
@@ -27,4 +27,33 @@
     -fx-font-weight: bold;
     -fx-font-family: "Monaco", monospace;
     -fx-padding: 0 0 10 0;
+}
+
+.registers-section {
+    -fx-background-color: rgba(168, 85, 247, 0.15);
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+    -fx-spacing: 15;
+    -fx-pref-width: 100%;
+
+}
+
+.silo-register {
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Monaco", monospace;
+}
+
+.instructions-box {
+    -fx-spacing: 3;
+    -fx-padding: 10 5 0 5;
+}
+
+.instr-text {
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Monaco", monospace;
+
 }

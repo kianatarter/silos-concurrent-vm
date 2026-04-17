@@ -36,6 +36,12 @@ public class Silo implements Runnable {
             }
             Instruction inst = instructions.get(PC);
             interpreter.executeOneInstruction(inst);
+            //todo
+            // At this point, you need to wait for other non idle silos
+            // I would recommend having a flag thats set to 0 at the start
+            // of a loop iteration, and 1 after completing instruction.
+            // Then you wait until all non idle silos have flag value 1
+            // before continuing
         }
     }
 
@@ -71,6 +77,7 @@ public class Silo implements Runnable {
     // called by resolve() when the interpreter sees UP, DOWN, LEFT, RIGHT as a source
     public int readPort(String direction) {
         try {
+            //todo: set internal state to idle so other threads don't wait for you
             return switch(direction) {
                 case "UP" -> upQueue.take();
                 case "DOWN" -> downQueue.take();
@@ -78,6 +85,7 @@ public class Silo implements Runnable {
                 case "RIGHT" -> rightQueue.take();
                 default -> 0;
             };
+            //todo: set internal state to non-idle to resynchronize
         } catch (InterruptedException e) {
             // if the thread is interrupted, restore the flag so the caller knows something happened.
             Thread.currentThread().interrupt();
@@ -90,6 +98,7 @@ public class Silo implements Runnable {
     // called by write() when the interpreter sees UP, DOWN, LEFT, RIGHT as a destination
     public void writePort(String direction, int value) {
         try {
+            //todo: same as read port, set internal state to idle before, and non-idle after
             switch(direction) {
                 // .put() blocks until .take() is called on the same queue
                 case "UP" -> upQueue.put(value);
