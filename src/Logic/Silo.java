@@ -9,16 +9,35 @@ import java.util.concurrent.SynchronousQueue;
  *
  *
  */
-public class Silo {
+public class Silo implements Runnable {
     private List<Instruction> instructions;
     private int ACC = 0;
     private int BAK = 0;
     private int PC = 0;
 
-    private SynchronousQueue<Integer> upQueue;
-    private SynchronousQueue<Integer> downQueue;
-    private SynchronousQueue<Integer> leftQueue;
-    private SynchronousQueue<Integer> rightQueue;
+    private SynchronousQueue<Integer> upQueue = new SynchronousQueue<>();
+    private SynchronousQueue<Integer> downQueue = new SynchronousQueue<>();
+    private SynchronousQueue<Integer> leftQueue = new SynchronousQueue<>();
+    private SynchronousQueue<Integer> rightQueue = new SynchronousQueue<>();
+
+    /**
+     * Main execution loop for this silo.
+     * Runs on its own thread
+     * Grabs and executes one instruction at a time infinitely.
+     * PC wraps back to 0 when it reaches the end of the program.
+     */
+    @Override
+    public void run() {
+        Interpreter interpreter = new Interpreter(this);
+        while (true) {
+            // wrap PC if we've gone past the last instruction
+            if (PC >= instructions.size()) {
+                PC = 0;
+            }
+            Instruction inst = instructions.get(PC);
+            interpreter.executeOneInstruction(inst);
+        }
+    }
 
     /**
      * Constructor for creating a Logic.Silo with instructions
