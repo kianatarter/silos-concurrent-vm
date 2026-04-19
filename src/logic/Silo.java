@@ -22,6 +22,22 @@ public class Silo implements Runnable {
     private SynchronousQueue<Integer> leftQueue = new SynchronousQueue<>();
     private SynchronousQueue<Integer> rightQueue = new SynchronousQueue<>();
 
+    // Replaces this silo's UP queue with a shared channel.
+    // Called when the silo above wires its DOWN port to this silo's UP port.
+    public void setUpQueue(SynchronousQueue<Integer> q) { upQueue = q; }
+
+    // Replaces this silo's DOWN queue with a shared channel.
+    // Called when wiring this silo's DOWN port to the silo below's UP port.
+    public void setDownQueue(SynchronousQueue<Integer> q) { downQueue = q; }
+
+    // Replaces this silo's LEFT queue with a shared channel.
+    // Called when the silo to the left wires its RIGHT port to this silo's LEFT port.
+    public void setLeftQueue(SynchronousQueue<Integer> q) { leftQueue = q; }
+
+    // Replaces this silo's RIGHT queue with a shared channel.
+    // Called when wiring this silo's RIGHT port to the silo to the right's LEFT port.
+    public void setRightQueue(SynchronousQueue<Integer> q) { rightQueue = q; }
+
     /**
      * Main execution loop for this silo.
      * Runs on its own thread
