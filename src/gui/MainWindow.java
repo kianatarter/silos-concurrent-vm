@@ -59,9 +59,12 @@ public class MainWindow extends Application {
 
 
 
-                Label instr = new Label("MOVE UP");
-                instr.getStyleClass().add("instr-text");
-                instructionsBox.getChildren().add(instr);
+                for (Instruction instr : siloData.getInstructions()){
+                    String instructionText = formatInstruction(instr);
+                    Label instrLabel = new Label(instructionText);
+                    instrLabel.getStyleClass().add("instr-text");
+                    instructionsBox.getChildren().add(instrLabel);
+                }
 
                 // create register labels
                 Label accLabel = new Label("ACC:" + "\n" + siloData.getACC());
@@ -134,7 +137,6 @@ public class MainWindow extends Application {
         root.setLeft(streamsPanel);
         root.setCenter(silos);
 
-
         BorderPane.setAlignment(silos, Pos.CENTER);
 
         Scene scene = new Scene(root, 1300, 900);
@@ -153,6 +155,22 @@ public class MainWindow extends Application {
         pulse.setCycleCount(Animation.INDEFINITE);
         pulse.setAutoReverse(true);
         pulse.play();
+    }
+
+    private String formatInstruction(Instruction instr){
+        if (instr.type().startsWith(":") && instr.type().endsWith(":")){
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(instr.type());
+        if (instr.arg1() != null){
+            sb.append(" ").append(instr.arg1());
+        }
+        if (instr.arg2() != null){
+            sb.append(" ").append(instr.arg2());
+        }
+        return sb.toString();
     }
 
 }
