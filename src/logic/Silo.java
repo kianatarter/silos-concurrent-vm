@@ -146,4 +146,15 @@ public class Silo implements Runnable {
               .count();
     }
 
+    // Returns the queue for a given direction so streams can wire into it directly
+    public SynchronousQueue<Integer> getQueue(String direction) {
+        return switch (direction) {
+            case "UP" -> upQueue;
+            case "DOWN" -> downQueue;
+            case "LEFT" -> leftQueue;
+            case "RIGHT" -> rightQueue;
+            default -> null;
+        };
+    }
+
 }
