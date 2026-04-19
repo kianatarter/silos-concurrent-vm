@@ -45,6 +45,7 @@ public class Parser {
             for (int c = 0; c < cols; c++){
                 List<Instruction> instructions = new ArrayList<>();
 
+
                 while (scanner.hasNextLine()){
 
                     String line = scanner.nextLine().trim();
@@ -59,6 +60,7 @@ public class Parser {
                     if (line.isEmpty()){
                         continue;
                     }
+
 
                     String type;
                     String arg1 = null;
@@ -92,6 +94,8 @@ public class Parser {
         Map<String, Stream> outputMap = new HashMap<>();
 
 
+
+
         while (scanner.hasNextLine()){
             String next = scanner.nextLine().trim();
 
@@ -104,6 +108,8 @@ public class Parser {
             if (next.equals("END")){
                 break;
             }
+
+
 
             if (next.startsWith("INPUT")){
                 String inputTitle = next;

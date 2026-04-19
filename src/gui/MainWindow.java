@@ -1,6 +1,8 @@
 package gui;
 
 
+import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -10,12 +12,24 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 
 import javafx.scene.control.Button;
+import javafx.util.Duration;
+import logic.Instruction;
+import logic.Puzzle;
+import logic.Silo;
+import parser.Parser;
+
+import java.io.File;
+import java.util.Scanner;
 
 
 public class MainWindow extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
+
+        Puzzle puzzle = Parser.parse(scanner);
+
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #1a1a1a");
 
@@ -25,8 +39,8 @@ public class MainWindow extends Application {
 
         silos.setHgap(60);
         silos.setVgap(60);
-        for (int r = 0; r < 3; r++){
-            for (int c = 0; c < 4; c++){
+        for (int r = 0; r < puzzle.grid.length; r++){
+            for (int c = 0; c < puzzle.grid[0].length; c++){
                 // create silos
                 VBox silo = new VBox(10);
                 silo.getStyleClass().add("silo-box");
@@ -41,19 +55,23 @@ public class MainWindow extends Application {
                 VBox instructionsBox = new VBox(3);
                 instructionsBox.getStyleClass().add("instructions-box");
 
+                Silo siloData = puzzle.grid[r][c];
+
+
 
                 Label instr = new Label("MOVE UP");
                 instr.getStyleClass().add("instr-text");
                 instructionsBox.getChildren().add(instr);
 
                 // create register labels
-                Label accLabel = new Label("ACC:" + "\n" + "0");
+                Label accLabel = new Label("ACC:" + "\n" + siloData.getACC());
                 accLabel.getStyleClass().add("silo-register");
 
-                Label bakLabel = new Label("BAK:" + "\n" + "0");
+
+                Label bakLabel = new Label("BAK:" + "\n" + siloData.getBAK());
                 bakLabel.getStyleClass().add("silo-register");
 
-                Label pcLabel = new Label("PC:" + "\n" + "0");
+                Label pcLabel = new Label("PC:" + "\n" + siloData.getPC());
                 pcLabel.getStyleClass().add("silo-register");
 
                 Label stateLabel = new Label("STATE:" + "\n" + "IDLE");
@@ -64,6 +82,10 @@ public class MainWindow extends Application {
                 silo.getChildren().addAll(registerBox, instructionsBox);
                 silo.setAlignment(Pos.TOP_LEFT);
                 silos.add(silo,c, r);
+                pulseAnimation(silo);
+
+
+                // TODO: add arrows to represent ports
             }
         }
 
@@ -86,11 +108,24 @@ public class MainWindow extends Application {
         Button start = new Button("START ▶");
         start.getStyleClass().add("control-button");
 
+        // TODO: add start button implementation
+        start.setOnAction(event -> {
+            System.out.println("START button pressed");
+        });
+
         Button pause = new Button("PAUSE ⏸");
         pause.getStyleClass().add("control-button");
+        // TODO: add pause button implementation
+        pause.setOnAction(event -> {
+            System.out.println("PAUSE button pressed");
+        });
 
         Button stop = new Button("STOP ⃠");
         stop.getStyleClass().add("control-button");
+        // TODO: add stop button implementation
+        stop.setOnAction(event -> {
+            System.out.println("STOP button pressed");
+        });
 
         controls.getStyleClass().add("controls");
         controls.getChildren().addAll(start, pause, stop);
@@ -102,7 +137,6 @@ public class MainWindow extends Application {
 
         BorderPane.setAlignment(silos, Pos.CENTER);
 
-
         Scene scene = new Scene(root, 1300, 900);
         scene.getStylesheets().add(
                 getClass().getResource("styles.css").toExternalForm()
@@ -110,6 +144,15 @@ public class MainWindow extends Application {
 
         primaryStage.setScene(scene);
         primaryStage.show();
-
     }
+
+    private void pulseAnimation(VBox silo){
+        FadeTransition pulse = new FadeTransition(Duration.seconds(0.8), silo);
+        pulse.setFromValue(1.0);
+        pulse.setToValue(0.6);
+        pulse.setCycleCount(Animation.INDEFINITE);
+        pulse.setAutoReverse(true);
+        pulse.play();
+    }
+
 }

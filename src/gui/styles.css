@@ -2,23 +2,27 @@
     -fx-background-color: #1a1a1a;
     -fx-border-color: #a855f7;
     -fx-border-width: 2;
+    -fx-background-radius: 12;
     -fx-min-width: 220px;
     -fx-max-width: 220px;
     -fx-min-height: 190px;
     -fx-padding: 12;
 
-     -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
+
+
 }
 
+
 .controls {
-    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #667eea 0%, #764ba2 100%);
+    -fx-background-color: rgba(26, 26, 26, 0.7);
     -fx-border-color: white;
     -fx-border-width: 2;
     -fx-min-width: 200px;
     -fx-max-width: 200px;
     -fx-min-height: 800px;
     -fx-max-height: 800px;
-    -fx-padding: 20
+    -fx-padding: 20;
 }
 
 .control-title {
@@ -54,6 +58,8 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-font-family: "Monaco", monospace;
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.5), 18, 0.4, 0, 0);
+
 
 }
 
@@ -74,6 +80,6 @@
     -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.5), 15, 0.4, 0, 0);
 }
 
-.control-button: hover {
+.control-button:hover {
     -fx-effect: dropshadow(gaussian, white, 20, 0.6, 0, 0);
 }

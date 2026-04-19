@@ -1,5 +1,6 @@
 import logic.Instruction;
 import logic.Puzzle;
+import logic.Silo;
 import logic.Stream;
 import parser.Parser;
 
@@ -17,7 +18,7 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         try {
-            Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
+            Scanner scanner = new Scanner(new File("test_input/sum_and_length.txt"));
             Puzzle puzzle = Parser.parse(scanner);
 
 
@@ -51,6 +52,10 @@ public class Main {
                 System.out.println(name + " at (" + stream.row() + "," + stream.col() +
                         ") expecting " + stream.values().size() + " values");
             }
+            Silo silo = puzzle.grid[0][1];  // Second silo in first row
+            System.out.println("Instructions: " + silo.getInstructions().size());  // Should be 9
+            System.out.println("OUT label at: " + silo.labelIndex("OUT"));    // Should be 5
+            System.out.println("DONE label at: " + silo.labelIndex("DONE"));  // Should be 8
 
 
             scanner.close();
