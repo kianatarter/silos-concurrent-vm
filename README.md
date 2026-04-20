@@ -223,9 +223,9 @@ Neighboring silos share a single `SynchronousQueue<Integer>` per edge. `wireNeig
 Set `TestRunner` as the main class in IntelliJ and configure at the top of the file:
 
 ```java
-static final String TEST_FILE  = "test_input/simple_example1.txt";
-static final int    NUM_RUNS   = 20;
-static final int    TIMEOUT_MS = 8000;
+static final String TEST_FILE = "test_input/simple_example1.txt";
+static final int NUM_RUNS = 20;
+static final int TIMEOUT_MS = 8000;
 ```
 
 Sample output:
@@ -247,3 +247,8 @@ Run  2: PASS
   All runs passed!
 ============================================================
 ```
+
+---
+## Known Bugs
+1. `Stop` button does not work correctly. 
+2. Highlighting of the output stream is highlighted purple when it shouldn't be highlighted.
