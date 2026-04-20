@@ -3,7 +3,10 @@ package logic;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * CS 351L Project 4: Silos
@@ -38,28 +41,35 @@ public class Silo implements Runnable {
     // Called when wiring this silo's RIGHT port to the silo to the right's LEFT port.
     public void setRightQueue(SynchronousQueue<Integer> q) { rightQueue = q; }
 
-    /**
-     * Main execution loop for this silo.
-     * Runs on its own thread
-     * Grabs and executes one instruction at a time infinitely.
-     * PC wraps back to 0 when it reaches the end of the program.
-     */
+    // replace barrier field with puzzle reference
+    private Puzzle puzzle;
+
+    public void setPuzzle(Puzzle puzzle) { this.puzzle = puzzle; }
+
+    private boolean justCompletedPortTransfer = false;
+
     @Override
     public void run() {
+        if (instructions.isEmpty()) {
+            puzzle.getActiveSilos().decrementAndGet();
+            return;
+        }
+
         Interpreter interpreter = new Interpreter(this);
         while (true) {
-            // wrap PC if we've gone past the last instruction
-            if (PC >= instructions.size()) {
-                PC = 0;
-            }
+            if (PC >= instructions.size()) PC = 0;
             Instruction inst = instructions.get(PC);
+            justCompletedPortTransfer = false;
             interpreter.executeOneInstruction(inst);
-            //todo
-            // At this point, you need to wait for other non idle silos
-            // I would recommend having a flag thats set to 0 at the start
-            // of a loop iteration, and 1 after completing instruction.
-            // Then you wait until all non idle silos have flag value 1
-            // before continuing
+            try {
+                // only hit the barrier if we didn't block on a port this step
+                if (!justCompletedPortTransfer) {
+                    puzzle.awaitBarrier();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
     }
 
@@ -90,40 +100,36 @@ public class Silo implements Runnable {
     public void setBAK(int val) { BAK = val; }
     public void setPC(int val) { PC = val; }
 
-    // Port communication
-    // blocks this silo's thread until a value is available from its neighbor
-    // called by resolve() when the interpreter sees UP, DOWN, LEFT, RIGHT as a source
     public int readPort(String direction) {
         try {
-            //todo: set internal state to idle so other threads don't wait for you
-            return switch(direction) {
+            puzzle.getActiveSilos().decrementAndGet();
+            int value = switch(direction) {
                 case "UP" -> upQueue.take();
                 case "DOWN" -> downQueue.take();
                 case "LEFT" -> leftQueue.take();
                 case "RIGHT" -> rightQueue.take();
                 default -> 0;
             };
-            //todo: set internal state to non-idle to resynchronize
+            puzzle.getActiveSilos().incrementAndGet();
+            justCompletedPortTransfer = true;
+            return value;
         } catch (InterruptedException e) {
-            // if the thread is interrupted, restore the flag so the caller knows something happened.
             Thread.currentThread().interrupt();
             return 0;
         }
     }
 
-    // Port communication
-    // blocks this silo's thread until a neighbor reads the value from this port.
-    // called by write() when the interpreter sees UP, DOWN, LEFT, RIGHT as a destination
     public void writePort(String direction, int value) {
         try {
-            //todo: same as read port, set internal state to idle before, and non-idle after
+            puzzle.getActiveSilos().decrementAndGet();
             switch(direction) {
-                // .put() blocks until .take() is called on the same queue
                 case "UP" -> upQueue.put(value);
                 case "DOWN" -> downQueue.put(value);
                 case "LEFT" -> leftQueue.put(value);
                 case "RIGHT" -> rightQueue.put(value);
             }
+            puzzle.getActiveSilos().incrementAndGet();
+            justCompletedPortTransfer = true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
