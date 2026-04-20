@@ -18,7 +18,7 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         try {
-              Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
+              Scanner scanner = new Scanner(new File("test_input/simple_example2.txt"));
 
             Puzzle puzzle = Parser.parse(scanner);
             puzzle.start();
