@@ -36,6 +36,12 @@ public class Puzzle {
 
     /** Output streams keyed by stream name (e.g. "OUTPUT.A"). */
     public Map<String, Stream> outputs;
+
+    /**
+     * GUI callback. Set via setSimulator() before start() is called.
+     * Null-checked before every call so the puzzle works headlessly too.
+     */
+    private Simulator simulator;
     private int delayMS = 1000;
     private volatile boolean paused = false;
 
@@ -105,6 +111,16 @@ public class Puzzle {
         return delayMS;
     }
 
+    /**
+     * Registers the GUI callback. Call this before start() so the
+     * feeder and collector threads can push stream updates to the GUI.
+     *
+     * @param simulator the MainWindow (or any Simulator implementation)
+     */
+    public void setSimulator(Simulator simulator) {
+        this.simulator = simulator;
+    }
+
     public void setPaused(boolean paused) {
         this.paused = paused;
     }
@@ -139,7 +155,7 @@ public class Puzzle {
 
     // Getters for activeSilos used by Silo.java
     public void setActiveSilos(AtomicInteger a) { this.activeSilos = a; }
-    public AtomicInteger getActiveSilos()        { return activeSilos; }
+    public AtomicInteger getActiveSilos() { return activeSilos; }
 
 
     // ---------------------------------------------------------------
@@ -165,10 +181,6 @@ public class Puzzle {
 
             int gen = generation;
 
-            // snapshot active count BEFORE incrementing silosWaiting —
-            // if we read it after, another thread can decrement activeSilos
-            // in the window between the two lines and cause the barrier to
-            // trip too early, stranding silos that haven't arrived yet.
             int needed = activeSilos.get();
             silosWaiting++;
 
@@ -188,7 +200,7 @@ public class Puzzle {
 
     /**
      * Connects neighboring silos by sharing a single SynchronousQueue between them.
-     * Each shared channel replaces two separate queues — one silo's RIGHT output
+     * Each shared channel replaces two separate queues - one silo's RIGHT output
      * becomes the same queue as its neighbor's LEFT input, and so on.
      * Must be called after the grid is built (i.e. after parsing).
      */
@@ -255,10 +267,17 @@ public class Puzzle {
 
             SynchronousQueue<Integer> queue = silo.getQueue(direction);
 
+            final String feederName = stream.name();
             Thread feeder = new Thread(() -> {
                 try {
-                    for (int value : stream.values()) {
-                        queue.put(value);
+                    List<Integer> vals = stream.values();
+                    for (int i = 0; i < vals.size(); i++) {
+                        queue.put(vals.get(i));
+                        // Notify GUI that this value was consumed by a silo
+                        if (simulator != null) {
+                            final int idx = i;
+                            simulator.onInputConsumed(feederName, idx);
+                        }
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -274,20 +293,29 @@ public class Puzzle {
         for (Stream stream : outputs.values()) {
             SynchronousQueue<Integer> queue = resolveQueue(stream);
 
+            final String collectorName = stream.name();
             Thread collector = new Thread(() -> {
                 try {
-                    for (int i = 0; i < stream.values().size(); i++) {
+                    List<Integer> vals = stream.values();
+                    for (int i = 0; i < vals.size(); i++) {
                         int actual   = queue.take();
-                        int expected = stream.values().get(i);
+                        int expected = vals.get(i);
+                        boolean correct = (actual == expected);
 
-                        if (actual == expected) {
-                            System.out.println("[" + stream.name() + "][" + i + "] correct: " + actual);
+                        if (correct) {
+                            System.out.println("[" + collectorName + "][" + i + "] correct: " + actual);
                         } else {
-                            System.out.println("[" + stream.name() + "][" + i + "] MISMATCH expected="
+                            System.out.println("[" + collectorName + "][" + i + "] MISMATCH expected="
                                   + expected + " got=" + actual);
                         }
+
+                        // Notify GUI with the result so it can update the stream display
+                        if (simulator != null) {
+                            final int idx = i;
+                            simulator.onOutputProduced(collectorName, idx, correct);
+                        }
                     }
-                    System.out.println("[" + stream.name() + "] complete");
+                    System.out.println("[" + collectorName + "] complete");
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }

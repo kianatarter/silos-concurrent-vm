@@ -19,6 +19,7 @@ import logic.*;
 import parser.Parser;
 
 import java.io.File;
+import javafx.stage.FileChooser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -41,9 +42,22 @@ public class MainWindow extends Application implements Simulator {
 
     private Timeline updateTimer;
 
+    // --- Stream label maps ---
+    // Keyed by stream name. Each list holds one Label per value in the stream.
+    // Updated by onInputConsumed() and onOutputProduced() via Platform.runLater().
+    private java.util.Map<String, List<Label>> inputStreamLabels = new java.util.HashMap<>();
+    private java.util.Map<String, List<Label>> outputStreamLabels = new java.util.HashMap<>();
+    private File lastDirectory = new File("test_input");
+    private Stage primaryStage;
+
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Scanner scanner = new Scanner(new File("test_input/simple_example2.txt"));
+        this.primaryStage = primaryStage;
+        Scanner scanner = chooseFile();
+        if (scanner == null) {
+            primaryStage.close();
+            return;
+        }
         this.puzzle = Parser.parse(scanner);
 
         BorderPane root = new BorderPane();
@@ -191,6 +205,37 @@ public class MainWindow extends Application implements Simulator {
         controls.setAlignment(Pos.BOTTOM_CENTER);
         controls.setPadding(new Insets(20));
 
+        Button loadBtn = new Button("LOAD FILE");
+        loadBtn.getStyleClass().add("control-button");
+        loadBtn.setOnAction(event -> {
+            FileChooser fc = new FileChooser();
+            fc.setTitle("Select a puzzle file");
+            fc.getExtensionFilters().add(
+                  new FileChooser.ExtensionFilter("Text files (*.txt)", "*.txt"));
+            if (lastDirectory != null && lastDirectory.exists())
+                fc.setInitialDirectory(lastDirectory);
+            File file = fc.showOpenDialog(primaryStage);
+            if (file != null) {
+                try {
+                    // Stop current simulation if running
+                    if (running) {
+                        running = false;
+                        paused = false;
+                        if (updateTimer != null) updateTimer.stop();
+                        puzzle.setPaused(false);
+                    }
+                    lastDirectory = file.getParentFile();
+                    Scanner sc = new Scanner(file);
+                    this.puzzle = Parser.parse(sc);
+                    sc.close();
+                    primaryStage.setTitle("CS 351 Project 4: Silos \u2014 " + file.getName());
+                    System.out.println("Loaded: " + file.getName());
+                } catch (Exception ex) {
+                    System.err.println("Failed to load: " + ex.getMessage());
+                }
+            }
+        });
+
         TextField delayField = new TextField("1");
         delayField.getStyleClass().add("delay-field");
         delayField.setMaxWidth(160);
@@ -227,6 +272,9 @@ public class MainWindow extends Application implements Simulator {
                 }));
                 updateTimer.setCycleCount(Timeline.INDEFINITE);
                 updateTimer.play();
+
+                // Register GUI as the callback before launching threads
+                puzzle.setSimulator(this);
 
                 // START SIMULATION
                 puzzle.start();
@@ -293,7 +341,7 @@ public class MainWindow extends Application implements Simulator {
                     updateTimer.stop();
                 }
 
-                pause.setText("PAUSE ⏸");  // Reset pause button text
+                pause.setText("PAUSE ⏸"); // Reset pause button text
                 System.out.println("Simulation stopped - restart app to run again");
             }
         });
@@ -329,12 +377,13 @@ public class MainWindow extends Application implements Simulator {
 
         controls.getStyleClass().add("controls");
         controls.getChildren().addAll(controlsTitle,
-                start,
-                pause,
-                stop,
-                resume,
-                delayLabel,
-                delayField);
+              loadBtn,
+              start,
+              pause,
+              stop,
+              resume,
+              delayLabel,
+              delayField);
 
         // CREATE I/O STREAMS PANEL
         VBox streamsPanel = new VBox(5);
@@ -346,29 +395,36 @@ public class MainWindow extends Application implements Simulator {
         streamsTitle.getStyleClass().add("silo-register");
 
 
-        // Add inputs
+        // Add inputs — store labels so onInputConsumed() can update them
+        inputStreamLabels.clear();
         VBox inputs = new VBox(8);
         for (String streamName : puzzle.inputs.keySet()){
             Stream stream = puzzle.inputs.get(streamName);
+            List<Label> labels = new ArrayList<>();
             VBox streamDisplay = createStreams(stream.name(),
-                    stream.values().stream().mapToInt(i -> i).toArray(),
-                    0);
+                  stream.values().stream().mapToInt(i -> i).toArray(),
+                  0, labels);
+            inputStreamLabels.put(stream.name(), labels);
             inputs.getChildren().add(streamDisplay);
         }
 
+        // Add outputs — store labels so onOutputProduced() can update them
+        outputStreamLabels.clear();
         VBox output = new VBox(8);
         for (String streamName : puzzle.outputs.keySet()){
             Stream stream = puzzle.outputs.get(streamName);
+            List<Label> labels = new ArrayList<>();
             VBox streamDisplay = createStreams(stream.name(),
-                    stream.values().stream().mapToInt(i -> i).toArray(),
-                    0);
+                  stream.values().stream().mapToInt(i -> i).toArray(),
+                  0, labels);
+            outputStreamLabels.put(stream.name(), labels);
             output.getChildren().add(streamDisplay);
         }
 
         streamsPanel.getChildren().addAll(
-                streamsTitle,
-                inputs,
-                output);
+              streamsTitle,
+              inputs,
+              output);
 
         ScrollPane streamsScroll = new ScrollPane(streamsPanel);
         streamsScroll.setFitToWidth(true);
@@ -390,11 +446,35 @@ public class MainWindow extends Application implements Simulator {
 
         Scene scene = new Scene(root, 1400, 900);
         scene.getStylesheets().add(
-                getClass().getResource("styles.css").toExternalForm()
+              getClass().getResource("styles.css").toExternalForm()
         );
 
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    /**
+     * Opens a FileChooser dialog for the user to select a puzzle file.
+     * Defaults to the test_input/ directory.
+     * Returns a Scanner on the chosen file, or null if cancelled.
+     */
+    private Scanner chooseFile() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Select a puzzle file");
+        fc.getExtensionFilters().add(
+              new FileChooser.ExtensionFilter("Text files (*.txt)", "*.txt"));
+        if (lastDirectory != null && lastDirectory.exists()) {
+            fc.setInitialDirectory(lastDirectory);
+        }
+        File file = fc.showOpenDialog(null);
+        if (file == null) return null;
+        lastDirectory = file.getParentFile();
+        try {
+            return new Scanner(file);
+        } catch (Exception e) {
+            System.err.println("Could not open file: " + e.getMessage());
+            return null;
+        }
     }
 
     private void pulseAnimation(VBox silo){
@@ -422,7 +502,18 @@ public class MainWindow extends Application implements Simulator {
         return sb.toString();
     }
 
-    private VBox createStreams(String name, int[] values, int currentIndex){
+    /**
+     * Builds a stream display widget showing all values as a vertical list.
+     * The value at currentIndex gets the stream-current highlight style.
+     * Each value label is added to the provided labels list so callers
+     * can update individual labels later via onInputConsumed / onOutputProduced.
+     *
+     * @param name stream name label shown at the top
+     * @param values all integer values in the stream
+     * @param currentIndex index of the value to highlight as current
+     * @param labels output list — populated with one Label per value
+     */
+    private VBox createStreams(String name, int[] values, int currentIndex, List<Label> labels){
         VBox streamBox = new VBox();
         streamBox.getStyleClass().add("stream-box");
 
@@ -431,7 +522,7 @@ public class MainWindow extends Application implements Simulator {
 
         VBox valuesList = new VBox(2);
 
-        for (int i =0; i < values.length; i++){
+        for (int i = 0; i < values.length; i++){
             Label valueLabel = new Label(String.valueOf(values[i]));
             valueLabel.getStyleClass().add("stream-value");
 
@@ -439,6 +530,7 @@ public class MainWindow extends Application implements Simulator {
                 valueLabel.getStyleClass().add("stream-current");
             }
             valuesList.getChildren().add(valueLabel);
+            labels.add(valueLabel); // store so we can update it later
         }
         streamBox.getChildren().addAll(nameLabel, valuesList);
         return streamBox;
@@ -543,7 +635,58 @@ public class MainWindow extends Application implements Simulator {
         });
     }
 
+    /**
+     * Called by Puzzle's feeder thread after a value is consumed from an input stream.
+     * Removes the highlight from the previous value and moves it to the next one,
+     * so the GUI always shows which value will be read next.
+     *
+     * @param streamName the input stream name
+     * @param index the index of the value just consumed
+     */
+    @Override
+    public void onInputConsumed(String streamName, int index) {
+        Platform.runLater(() -> {
+            List<Label> labels = inputStreamLabels.get(streamName);
+            if (labels == null) return;
+
+            // Remove highlight from the consumed value
+            if (index < labels.size()) {
+                labels.get(index).getStyleClass().remove("stream-current");
+                labels.get(index).setStyle("-fx-opacity: 0.4;"); // dim consumed values
+            }
+
+            // Highlight the next value to be read
+            int next = index + 1;
+            if (next < labels.size()) {
+                labels.get(next).getStyleClass().add("stream-current");
+            }
+        });
+    }
+
+    /**
+     * Called by Puzzle's collector thread after a value is received from an output stream.
+     * Marks the value green if it matched the expected value, or red if it mismatched.
+     *
+     * @param streamName the output stream name
+     * @param index the index of the value just produced
+     * @param correct true if actual == expected
+     */
+    @Override
+    public void onOutputProduced(String streamName, int index, boolean correct) {
+        Platform.runLater(() -> {
+            List<Label> labels = outputStreamLabels.get(streamName);
+            if (labels == null || index >= labels.size()) return;
+
+            Label label = labels.get(index);
+            if (correct) {
+                // Correct — show in green
+                label.setStyle("-fx-text-fill: #4caf50; -fx-font-weight: bold;");
+            } else {
+                // Mismatch — show in red with the actual value appended
+                label.setStyle("-fx-background-color: #b71c1c; -fx-text-fill: white; "
+                      + "-fx-font-weight: bold; -fx-padding: 1 3;");
+            }
+        });
+    }
 
 }
-
-

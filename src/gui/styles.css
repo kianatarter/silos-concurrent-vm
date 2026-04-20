@@ -97,7 +97,7 @@
 }
 
 .stream-current {
-    -fx-background-color: red;
+    -fx-background-color: purple;
     -fx-text-fill: white;
     -fx-font-size: 9px;
     -fx-font-weight: bold;
