@@ -19,11 +19,8 @@ public class Main {
     public static void main(String[] args) {
         try {
               Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
-//            Puzzle puzzle = Parser.parse(scanner);
 
             Puzzle puzzle = Parser.parse(scanner);
-            puzzle.wireNeighbors();
-            puzzle.wireStreams();
             puzzle.start();
 
             Thread.sleep(5000);

@@ -1,5 +1,6 @@
 package logic;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -164,37 +165,55 @@ public class Puzzle {
         // handle output streams — ONE shared collector thread reads all streams in lockstep
         Thread collector = new Thread(() -> {
             try {
-                List<Stream> outputList = new ArrayList<>(outputs.values());
+                // Create a separate thread for EACH output stream
+                List<Thread> collectorThreads = new ArrayList<>();
 
-                int maxValues = outputList.stream()
-                      .mapToInt(s -> s.values().size())
-                      .max()
-                      .orElse(0);
+                for (Stream stream : outputs.values()) {
+                    Thread streamCollector = new Thread(() -> {
+                        try {
+                            int r = stream.row();
+                            int c = stream.col();
+                            Silo silo;
+                            String direction;
 
-                for (int i = 0; i < maxValues; i++) {
-                    for (Stream stream : outputList) {
-                        if (i >= stream.values().size()) continue;
+                            if (r == -1) { silo = grid[0][c]; direction = "UP"; }
+                            else if (r == grid.length) { silo = grid[grid.length-1][c]; direction = "DOWN"; }
+                            else if (c == -1) { silo = grid[r][0]; direction = "LEFT"; }
+                            else { silo = grid[r][grid[0].length-1]; direction = "RIGHT"; }
 
-                        int r = stream.row();
-                        int c = stream.col();
-                        Silo silo;
-                        String direction;
+                            SynchronousQueue<Integer> queue = silo.getQueue(direction);
 
-                        if (r == -1) { silo = grid[0][c]; direction = "UP"; }
-                        else if (r == grid.length) { silo = grid[grid.length-1][c]; direction = "DOWN"; }
-                        else if (c == -1) { silo = grid[r][0]; direction = "LEFT"; }
-                        else { silo = grid[r][grid[0].length-1]; direction = "RIGHT"; }
+                            // Collect ALL values for THIS stream
+                            for (int i = 0; i < stream.values().size(); i++) {
+                                int actual = queue.take();
+                                int expected = stream.values().get(i);
 
-                        int actual = silo.getQueue(direction).take();
-                        int expected = stream.values().get(i);
-                        if (actual == expected) {
-                            System.out.println("[" + stream.name() + "] correct: " + actual);
-                        } else {
-                            System.out.println("[" + stream.name() + "] MISMATCH expected=" + expected + " got=" + actual);
+                                if (actual == expected) {
+                                    System.out.println("[" + stream.name() + "][" + i + "] correct: " + actual);
+                                } else {
+                                    System.out.println("[" + stream.name() + "][" + i + "] MISMATCH expected=" + expected + " got=" + actual);
+                                }
+                            }
+
+                            System.out.println("[" + stream.name() + "] complete");
+
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
-                    }
+                    });
+
+                    streamCollector.setDaemon(true);
+                    streamCollector.start();
+                    collectorThreads.add(streamCollector);
                 }
+
+                // Wait for all collector threads to finish
+                for (Thread t : collectorThreads) {
+                    t.join();
+                }
+
                 System.out.println("All streams complete");
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
