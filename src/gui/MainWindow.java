@@ -209,7 +209,6 @@ public class MainWindow extends Application implements Simulator {
             if (!running) {
                 running = true;
 
-                // GET DELAY FROM TEXT FIELD ← ADD THIS
                 try {
                     double delaySeconds = Double.parseDouble(delayField.getText());
 
@@ -305,9 +304,6 @@ public class MainWindow extends Application implements Simulator {
             });
             stepDelay.play();
         });
-
-
-
 
         controls.getStyleClass().add("controls");
         controls.getChildren().addAll(controlsTitle,
