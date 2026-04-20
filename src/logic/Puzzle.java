@@ -19,6 +19,9 @@ public class Puzzle {
     public Silo[][] grid;
     public Map<String, Stream> inputs;
     public Map<String, Stream> outputs;
+    private int delayMS = 1000;
+    private volatile boolean paused = false;
+
 
     private AtomicInteger activeSilos;
 
@@ -32,6 +35,24 @@ public class Puzzle {
         wireNeighbors();
         wireStreams();
     }
+
+    public void setDelay(int millis){
+        this.delayMS = millis;
+    }
+
+    public int getDelayMS(){
+        return delayMS;
+    }
+
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+
 
     /**
      * Launches each silo on its own thread.

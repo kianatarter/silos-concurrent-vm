@@ -1,10 +1,9 @@
 package gui;
 
 
-import javafx.animation.Animation;
-import javafx.animation.FadeTransition;
-import javafx.animation.PauseTransition;
+import javafx.animation.*;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -16,25 +15,36 @@ import javafx.stage.Stage;
 import javafx.geometry.Pos;
 
 import javafx.util.Duration;
-import logic.Instruction;
-import logic.Puzzle;
-import logic.Silo;
-import logic.Stream;
+import logic.*;
 import parser.Parser;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 
-public class MainWindow extends Application {
+public class MainWindow extends Application implements Simulator {
+    private Label[][] accLabels;
+    private Label[][] bakLabels;
+    private Label[][] pcLabels;
+    private Label[][] stateLabels;
+    private List<Label>[][] instructionLabels; // Store instruction labels for highlighting
+    private Puzzle puzzle;
+
+    private volatile boolean running = false;
+    private volatile boolean paused = false;
+
     private Label[][][] horizontalArrows;
     private Label[][][] verticalArrows;
 
+
+    private Timeline updateTimer;
+
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Scanner scanner = new Scanner(new File("test_input/simple_example1.txt"));
-        Puzzle puzzle = Parser.parse(scanner);
+        Scanner scanner = new Scanner(new File("test_input/simple_example2.txt"));
+        this.puzzle = Parser.parse(scanner);
 
 
         BorderPane root = new BorderPane();
@@ -52,12 +62,19 @@ public class MainWindow extends Application {
         int rows = puzzle.grid.length;
         int cols = puzzle.grid[0].length;
 
+        accLabels = new Label[rows][cols];
+        bakLabels = new Label[rows][cols];
+        pcLabels = new Label[rows][cols];
+        stateLabels = new Label[rows][cols];
+        instructionLabels = new List[rows][cols];
+
         horizontalArrows = new Label[rows][cols][3];
         verticalArrows = new Label[rows][cols][3];
 
 
         for (int r = 0; r < puzzle.grid.length; r++){
             for (int c = 0; c < puzzle.grid[0].length; c++){
+                puzzle.grid[r][c].setCallback(this,r,c);
 
                 // create silos
                 VBox silo = new VBox(10);
@@ -66,7 +83,7 @@ public class MainWindow extends Application {
                 // create column to hold registers
                 HBox registerBox = new HBox(12);
                 registerBox.getStyleClass().add("registers-section");
-              //  registerBox.setMaxWidth(Double.MAX_VALUE);
+                //  registerBox.setMaxWidth(Double.MAX_VALUE);
                 registerBox.setAlignment(Pos.CENTER);
 
                 // create column to hold instructions
@@ -76,12 +93,16 @@ public class MainWindow extends Application {
                 // create a reference to store silo data
                 Silo siloData = puzzle.grid[r][c];
 
+                // Initialize instruction labels list for this silo
+                instructionLabels[r][c] = new ArrayList<>();
+
                 // add instructions for each silo
                 for (Instruction instr : siloData.getInstructions()){
                     String instructionText = formatInstruction(instr);
                     Label instrLabel = new Label(instructionText);
                     instrLabel.getStyleClass().add("instr-text");
                     instructionsBox.getChildren().add(instrLabel);
+                    instructionLabels[r][c].add(instrLabel); // Store for highlighting
                 }
 
                 ScrollPane instructionsScroll = new ScrollPane(instructionsBox);
@@ -100,15 +121,18 @@ public class MainWindow extends Application {
                 Label pcLabel = new Label("PC:" + "\n" + siloData.getPC());
                 pcLabel.getStyleClass().add("silo-register");
 
-                Label stateLabel = new Label("STATE:" + "\n" + "IDLE");
-                stateLabel.getStyleClass().add("silo-register");
 
-               registerBox.getChildren().addAll(accLabel, bakLabel, pcLabel, stateLabel);
+
+                accLabels[r][c] = accLabel;
+                bakLabels[r][c] = bakLabel;
+                pcLabels[r][c] = pcLabel;
+
+                registerBox.getChildren().addAll(accLabel, bakLabel, pcLabel);
 
                 silo.getChildren().addAll(registerBox, instructionsScroll);
                 silo.setAlignment(Pos.TOP_LEFT);
                 silos.add(silo,c * 2, r * 2);
-                pulseAnimation(silo);
+                // pulseAnimation(silo);
 
 
                 // RIGHT ARROW
@@ -132,6 +156,7 @@ public class MainWindow extends Application {
 
                     horizontalArrows[r][c][0] = arrowSymbol;
                     horizontalArrows[r][c][1] = rightValue;
+                    horizontalArrows[r][c][2] = leftValue;
                 }
 
 
@@ -144,19 +169,20 @@ public class MainWindow extends Application {
                     Label arrowSymbol = new Label("↕");
                     arrowSymbol.getStyleClass().add("arrow-symbol");
 
-                    Label leftValue = new Label("");
-                    leftValue.getStyleClass().add("arrow-value");
+                    Label upValue = new Label("");
+                    upValue.getStyleClass().add("arrow-value");
 
-                    Label rightValue = new Label("");
-                    rightValue.getStyleClass().add("arrow-value");
+                    Label downValue = new Label("");
+                    downValue.getStyleClass().add("arrow-value");
 
-                    arrowBox.getChildren().addAll(leftValue, arrowSymbol, rightValue);
+                    arrowBox.getChildren().addAll(upValue, arrowSymbol, downValue);
 
                     // Add arrow at ODD row position (r*2 + 1)
                     silos.add(arrowBox, c * 2, (r * 2) + 1);
 
                     verticalArrows[r][c][0] = arrowSymbol;
-                    verticalArrows[r][c][1] = rightValue;
+                    verticalArrows[r][c][1] = downValue;
+                    verticalArrows[r][c][2] = upValue;
                 }
 
             }
@@ -170,26 +196,85 @@ public class MainWindow extends Application {
         controls.setAlignment(Pos.BOTTOM_CENTER);
         controls.setPadding(new Insets(20));
 
+        TextField delayField = new TextField("1");
+        delayField.getStyleClass().add("delay-field");
+        delayField.setMaxWidth(160);
+        delayField.setPromptText("0-10");
+
         Button start = new Button("START ▶");
         start.getStyleClass().add("control-button");
 
         // TODO: add start button implementation
         start.setOnAction(event -> {
-            System.out.println("START button pressed");
+            if (!running) {
+                running = true;
+
+                // GET DELAY FROM TEXT FIELD ← ADD THIS
+                try {
+                    double delaySeconds = Double.parseDouble(delayField.getText());
+
+                    // Clamp to 0-10 seconds
+                    if (delaySeconds < 0) delaySeconds = 0;
+                    if (delaySeconds > 10) delaySeconds = 10;
+
+                    int delayMillis = (int)(delaySeconds * 1000);
+                    puzzle.setDelay(delayMillis);
+
+                    System.out.println("Delay set to " + delaySeconds + " seconds (" + delayMillis + "ms)");
+
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid delay, using default 1 second");
+                    puzzle.setDelay(1000);
+                }
+
+                // START AUTOMATIC DISPLAY UPDATES
+                updateTimer = new Timeline(new KeyFrame(Duration.millis(100), e -> {
+                    updateDisplay();
+                }));
+                updateTimer.setCycleCount(Timeline.INDEFINITE);
+                updateTimer.play();
+
+                // START SIMULATION
+                puzzle.start();
+                System.out.println("Simulation started");
+            }
         });
 
         Button pause = new Button("PAUSE ⏸");
         pause.getStyleClass().add("control-button");
-        // TODO: add pause button implementation
+
         pause.setOnAction(event -> {
-            System.out.println("PAUSE button pressed");
+            if (!running) {
+                return; // simulation not started yet
+            }
+
+            paused = !paused;
+            puzzle.setPaused(paused);
+
+            if (paused) {
+                pause.setText("STEP ≫");
+                System.out.println("Simulation PAUSED");
+            } else {
+                pause.setText("PAUSE ⏸");
+                System.out.println("Simulation RESUMED");
+            }
         });
 
         Button stop = new Button("STOP ⃠");
         stop.getStyleClass().add("control-button");
         // TODO: add stop button implementation
         stop.setOnAction(event -> {
-            System.out.println("STOP button pressed");
+            if (running) {
+                running = false;
+                paused = false;
+
+                if (updateTimer != null) {
+                    updateTimer.stop();
+                }
+
+                pause.setText("PAUSE ⏸");  // Reset pause button text
+                System.out.println("Simulation stopped - restart app to run again");
+            }
         });
 
         Label delayLabel = new Label("Delay (sec):");
@@ -197,16 +282,32 @@ public class MainWindow extends Application {
 
         Button step = new Button("STEP ≫");
         step.getStyleClass().add("control-button");
-        // TODO: add step button implementation
+
         step.setOnAction(event -> {
-            System.out.println("STEP button pressed");
+            if (!running) {
+                System.out.println("Start simulation first!");
+                return;
+            }
+
+            if (!paused) {
+                System.out.println("Pause first to use step mode");
+                return;
+            }
+
+            // Unpause briefly to let ONE barrier cycle complete
+            puzzle.setPaused(false);
+
+            // Re-pause after a short delay
+            PauseTransition stepDelay = new PauseTransition(Duration.millis(50));
+            stepDelay.setOnFinished(e -> {
+                puzzle.setPaused(true);
+                System.out.println("Stepped one instruction");
+            });
+            stepDelay.play();
         });
 
 
-        TextField delayField = new TextField("1");
-        delayField.getStyleClass().add("delay-field");
-        delayField.setMaxWidth(160);
-        delayField.setPromptText("0-10");
+
 
         controls.getStyleClass().add("controls");
         controls.getChildren().addAll(controlsTitle,
@@ -273,17 +374,6 @@ public class MainWindow extends Application {
         scene.getStylesheets().add(
                 getClass().getResource("styles.css").toExternalForm()
         );
-
-        // TEST: Show arrow after 2 seconds
-        PauseTransition test = new PauseTransition(Duration.seconds(2));
-        test.setOnFinished(e -> {
-            showTransfer(0, 0, "RIGHT", 42);  // Test horizontal arrow
-
-            PauseTransition test2 = new PauseTransition(Duration.seconds(1));
-            test2.setOnFinished(e2 -> showTransfer(0, 0, "DOWN", 99));  // Test vertical arrow
-            test2.play();
-        });
-        test.play();
 
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -358,13 +448,13 @@ public class MainWindow extends Application {
             case "LEFT":
                 if (fromCol > 0) {
                     arrow = horizontalArrows[fromRow][fromCol - 1][0];
-                    value = horizontalArrows[fromRow][fromCol - 1][1];
+                    value = horizontalArrows[fromRow][fromCol - 1][2];
                 }
                 break;
             case "UP":
                 if (fromRow > 0) {
                     arrow = verticalArrows[fromRow - 1][fromCol][0];
-                    value = verticalArrows[fromRow- 1][fromCol][1];
+                    value = verticalArrows[fromRow- 1][fromCol][2];
                 }
                 break;
         }
@@ -386,6 +476,53 @@ public class MainWindow extends Application {
             pause.play();
         }
 
+    }
+
+    private void updateDisplay(){
+        Platform.runLater(() -> {
+            int rows = puzzle.grid.length;
+            int cols = puzzle.grid[0].length;
+
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    Silo silo = puzzle.grid[r][c];
+
+                    accLabels[r][c].setText("ACC:\n" + silo.getACC());
+                    bakLabels[r][c].setText("BAK:\n" + silo.getBAK());
+                    pcLabels[r][c].setText("PC:\n" + silo.getPC());
+                    // stateLabels[r][c].setText(silo.getState()); // TODO: when partner adds this
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onRegisterChange(int row, int col, int acc, int bak, int pc) {
+        // System.out.println("[GUI] Silo (" + row + "," + col + ") - ACC=" + acc + " BAK=" + bak + " PC=" + pc);
+        Platform.runLater(() -> {
+            accLabels[row][col].setText("ACC:\n" + acc);
+            bakLabels[row][col].setText("BAK:\n" + bak);
+            pcLabels[row][col].setText("PC:\n" + pc);
+
+            // Highlight current instruction
+            List<Label> instructions = instructionLabels[row][col];
+            for (int i = 0; i < instructions.size(); i++) {
+                if (i == pc) {
+                    instructions.get(i).setStyle("-fx-background-color: #ffeb3b; -fx-text-fill: #000;");
+                } else {
+                    instructions.get(i).setStyle("");
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onPortTransfer(int fromRow, int fromCol, String direction, int value) {
+        System.out.println("[GUI] Transfer from (" + fromRow + "," + fromCol + ") " + direction + " = " + value);
+
+        Platform.runLater(() -> {
+            showTransfer(fromRow, fromCol, direction, value);
+        });
     }
 
 

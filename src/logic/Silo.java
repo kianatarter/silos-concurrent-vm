@@ -19,6 +19,8 @@ public class Silo implements Runnable {
     private int ACC = 0;
     private int BAK = 0;
     private int PC = 0;
+    private Simulator callback;
+    private int row, col;
 
     private SynchronousQueue<Integer> upQueue = new SynchronousQueue<>();
     private SynchronousQueue<Integer> downQueue = new SynchronousQueue<>();
@@ -48,6 +50,12 @@ public class Silo implements Runnable {
 
     private boolean justCompletedPortTransfer = false;
 
+    public void setCallback(Simulator callback, int row, int col) {
+        this.callback = callback;
+        this.row = row;
+        this.col = col;
+    }
+
     @Override
     public void run() {
         if (instructions.isEmpty()) {
@@ -57,11 +65,29 @@ public class Silo implements Runnable {
 
         Interpreter interpreter = new Interpreter(this);
         while (true) {
+            while (puzzle.isPaused()) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+
             if (PC >= instructions.size()) PC = 0;
             Instruction inst = instructions.get(PC);
             justCompletedPortTransfer = false;
             interpreter.executeOneInstruction(inst);
+
+            if (callback != null) {
+                callback.onRegisterChange(row, col, ACC, BAK, PC);
+            }
+
             try {
+                if (puzzle.getDelayMS() > 0) {
+                    Thread.sleep(puzzle.getDelayMS());
+                }
+
                 if (justCompletedPortTransfer) {
                     // The silo blocked on a port and already decremented activeSilos.
                     // Wait at the barrier while still "inactive", then re-increment
@@ -131,6 +157,11 @@ public class Silo implements Runnable {
             // Decrement before blocking. The run() loop will re-increment
             // after the barrier once this port transfer completes.
             puzzle.getActiveSilos().decrementAndGet();
+
+            if (callback != null) {
+                callback.onPortTransfer(row, col, direction, value);
+            }
+
             switch(direction) {
                 case "UP" -> upQueue.put(value);
                 case "DOWN" -> downQueue.put(value);

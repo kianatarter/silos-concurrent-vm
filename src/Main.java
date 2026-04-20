@@ -1,12 +1,8 @@
-import logic.Instruction;
 import logic.Puzzle;
-import logic.Silo;
-import logic.Stream;
 import parser.Parser;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -18,7 +14,7 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         try {
-              Scanner scanner = new Scanner(new File("test_input/simple_example2.txt"));
+              Scanner scanner = new Scanner(new File("test_input/simple_example3.txt"));
 
             Puzzle puzzle = Parser.parse(scanner);
             puzzle.start();
@@ -26,45 +22,42 @@ public class Main {
             Thread.sleep(5000);
 
 
-            System.out.println("=== PUZZLE PARSED ===");
-            System.out.println("Title: " + puzzle.title);
-            System.out.println("Description: " + puzzle.description);
-            System.out.println("Grid: " + puzzle.grid.length + "x" + puzzle.grid[0].length);
-
-            System.out.println("\n=== ALL SILOS ===");
-            for (int r = 0; r < puzzle.grid.length; r++) {
-                for (int c = 0; c < puzzle.grid[r].length; c++) {
-                    System.out.println("Logic.Silo (" + r + "," + c + "): " + puzzle.grid[r][c]);
-
-                    // Print the actual instructions
-                    List<Instruction> program = puzzle.grid[r][c].getInstructions();
-                    for (Instruction inst : program) {
-                        System.out.println("  " + inst);
-                    }
-                }
-            }
-            System.out.println("\n=== INPUT STREAMS ===");
-            for (String name : puzzle.inputs.keySet()) {
-                Stream stream = puzzle.inputs.get(name);
-                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
-                        ") with " + stream.values().size() + " values");
-            }
-
-            System.out.println("\n=== OUTPUT STREAMS ===");
-            for (String name : puzzle.outputs.keySet()) {
-                Stream stream = puzzle.outputs.get(name);
-                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
-                        ") expecting " + stream.values().size() + " values");
-            }
-            Silo silo = puzzle.grid[0][1];  // Second silo in first row
-            System.out.println("Instructions: " + silo.getInstructions().size()); // Should be 9
-            System.out.println("OUT label at: " + silo.labelIndex("OUT")); // Should be 5
-            System.out.println("DONE label at: " + silo.labelIndex("DONE")); // Should be 8
-
+//            System.out.println("=== PUZZLE PARSED ===");
+//            System.out.println("Title: " + puzzle.title);
+//            System.out.println("Description: " + puzzle.description);
+//            System.out.println("Grid: " + puzzle.grid.length + "x" + puzzle.grid[0].length);
+//
+//            System.out.println("\n=== ALL SILOS ===");
+//            for (int r = 0; r < puzzle.grid.length; r++) {
+//                for (int c = 0; c < puzzle.grid[r].length; c++) {
+//                    System.out.println("Logic.Silo (" + r + "," + c + "): " + puzzle.grid[r][c]);
+//
+//                    // Print the actual instructions
+//                    List<Instruction> program = puzzle.grid[r][c].getInstructions();
+//                    for (Instruction inst : program) {
+//                        System.out.println("  " + inst);
+//                    }
+//                }
+//            }
+//            System.out.println("\n=== INPUT STREAMS ===");
+//            for (String name : puzzle.inputs.keySet()) {
+//                Stream stream = puzzle.inputs.get(name);
+//                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
+//                        ") with " + stream.values().size() + " values");
+//            }
+//
+//            System.out.println("\n=== OUTPUT STREAMS ===");
+//            for (String name : puzzle.outputs.keySet()) {
+//                Stream stream = puzzle.outputs.get(name);
+//                System.out.println(name + " at (" + stream.row() + "," + stream.col() +
+//                        ") expecting " + stream.values().size() + " values");
+//            }
+         
 
             scanner.close();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
+
         } catch (InterruptedException e) {
            throw new RuntimeException(e);
         }
