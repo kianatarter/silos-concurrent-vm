@@ -46,7 +46,6 @@ public class MainWindow extends Application implements Simulator {
         Scanner scanner = new Scanner(new File("test_input/simple_example2.txt"));
         this.puzzle = Parser.parse(scanner);
 
-
         BorderPane root = new BorderPane();
         primaryStage.setTitle("CS 351 Project 4: Silos");
         root.setStyle("-fx-background-color: #1a1a1a");
@@ -57,7 +56,6 @@ public class MainWindow extends Application implements Simulator {
 
         silos.setHgap(20);
         silos.setVgap(20);
-
 
         int rows = puzzle.grid.length;
         int cols = puzzle.grid[0].length;
@@ -70,7 +68,6 @@ public class MainWindow extends Application implements Simulator {
 
         horizontalArrows = new Label[rows][cols][3];
         verticalArrows = new Label[rows][cols][3];
-
 
         for (int r = 0; r < puzzle.grid.length; r++){
             for (int c = 0; c < puzzle.grid[0].length; c++){
@@ -120,8 +117,6 @@ public class MainWindow extends Application implements Simulator {
 
                 Label pcLabel = new Label("PC:" + "\n" + siloData.getPC());
                 pcLabel.getStyleClass().add("silo-register");
-
-
 
                 accLabels[r][c] = accLabel;
                 bakLabels[r][c] = bakLabel;
@@ -245,16 +240,43 @@ public class MainWindow extends Application implements Simulator {
 
         pause.setOnAction(event -> {
             if (!running) {
-                return; // simulation not started yet
+                System.out.println("Start simulation first!");
+                return;
             }
 
-            paused = !paused;
-            puzzle.setPaused(paused);
+            if (!paused) {
+                // First click: PAUSE the simulation
+                paused = true;
+                puzzle.setPaused(true);
+                pause.setText("STEP ≫");
+                System.out.println("Simulation PAUSED - click again to step");
+            } else {
+                // Already paused - execute ONE step
+                System.out.println("Stepping one instruction...");
+                puzzle.setPaused(false);
+
+                // Re-pause after one barrier cycle (100ms should be enough)
+                PauseTransition stepDelay = new PauseTransition(Duration.millis(100));
+                stepDelay.setOnFinished(e -> {
+                    puzzle.setPaused(true);
+                    System.out.println("Step complete");
+                });
+                stepDelay.play();
+            }
+        });
+
+        Button resume = new Button("RESUME ▶");
+        resume.getStyleClass().add("control-button");
+
+        resume.setOnAction(event -> {
+            if (!running) {
+                System.out.println("Start simulation first!");
+                return;
+            }
 
             if (paused) {
-                pause.setText("STEP ≫");
-                System.out.println("Simulation PAUSED");
-            } else {
+                paused = false;
+                puzzle.setPaused(false);
                 pause.setText("PAUSE ⏸");
                 System.out.println("Simulation RESUMED");
             }
@@ -314,7 +336,7 @@ public class MainWindow extends Application implements Simulator {
                 start,
                 pause,
                 stop,
-                step,
+                resume,
                 delayLabel,
                 delayField);
 
