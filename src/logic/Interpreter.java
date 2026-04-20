@@ -30,13 +30,21 @@ public class Interpreter {
          case "JLZ"  -> { if (silo.getACC() <  0) { silo.setPC(silo.labelIndex(instruction.arg1())); return; } }
          case "JRO"  -> {
             int offset = resolve(instruction.arg1());
-            int next = Math.floorMod(silo.getPC() + offset, silo.executableCount());
+            // Must wrap over the full instruction list size, not executableCount().
+            // executableCount() is smaller (it skips labels), so floorMod can
+            // produce a PC that lands on a label and silently loops in the wrong place.
+            int next = Math.floorMod(silo.getPC() + offset, silo.getInstructions().size());
             silo.setPC(next);
             return;
          }
          case "SLEEP" -> {
             int ms = Integer.parseInt(instruction.arg1()) * 1000;
             try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+         }
+         default -> {
+            // Label instructions (e.g. ":START:") are stored in the list but are
+            // not executable. If the PC lands on one (e.g. after a JRO), just
+            // advance past it — the PC++ below handles that.
          }
       }
       silo.setPC(silo.getPC() + 1);

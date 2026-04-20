@@ -62,10 +62,13 @@ public class Puzzle {
     public void awaitBarrier() throws InterruptedException {
         synchronized (barrierLock) {
             int gen = generation;
-            silosWaiting++;
 
-            // snapshot active count RIGHT NOW — don't let it change under us
+            // snapshot active count BEFORE incrementing silosWaiting —
+            // if we read it after, another thread can decrement activeSilos
+            // in the window between the two lines and cause the barrier to
+            // trip too early, stranding silos that haven't arrived yet.
             int needed = activeSilos.get();
+            silosWaiting++;
 
             if (silosWaiting >= needed) {
                 // all active silos are here — trip the barrier

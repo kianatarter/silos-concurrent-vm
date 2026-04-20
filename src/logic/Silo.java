@@ -62,8 +62,14 @@ public class Silo implements Runnable {
             justCompletedPortTransfer = false;
             interpreter.executeOneInstruction(inst);
             try {
-                // only hit the barrier if we didn't block on a port this step
-                if (!justCompletedPortTransfer) {
+                if (justCompletedPortTransfer) {
+                    // The silo blocked on a port and already decremented activeSilos.
+                    // Wait at the barrier while still "inactive", then re-increment
+                    // so the count is correct for the next round. This prevents the
+                    // silo from being counted as active before it has re-synchronized.
+                    puzzle.awaitBarrier();
+                    puzzle.getActiveSilos().incrementAndGet();
+                } else {
                     puzzle.awaitBarrier();
                 }
             } catch (InterruptedException e) {
@@ -102,6 +108,8 @@ public class Silo implements Runnable {
 
     public int readPort(String direction) {
         try {
+            // Decrement before blocking. The run() loop will re-increment
+            // after the barrier once this port transfer completes.
             puzzle.getActiveSilos().decrementAndGet();
             int value = switch(direction) {
                 case "UP" -> upQueue.take();
@@ -110,7 +118,6 @@ public class Silo implements Runnable {
                 case "RIGHT" -> rightQueue.take();
                 default -> 0;
             };
-            puzzle.getActiveSilos().incrementAndGet();
             justCompletedPortTransfer = true;
             return value;
         } catch (InterruptedException e) {
@@ -121,6 +128,8 @@ public class Silo implements Runnable {
 
     public void writePort(String direction, int value) {
         try {
+            // Decrement before blocking. The run() loop will re-increment
+            // after the barrier once this port transfer completes.
             puzzle.getActiveSilos().decrementAndGet();
             switch(direction) {
                 case "UP" -> upQueue.put(value);
@@ -128,7 +137,6 @@ public class Silo implements Runnable {
                 case "LEFT" -> leftQueue.put(value);
                 case "RIGHT" -> rightQueue.put(value);
             }
-            puzzle.getActiveSilos().incrementAndGet();
             justCompletedPortTransfer = true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
