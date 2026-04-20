@@ -11,20 +11,81 @@ import java.util.List;
 
 /**
  * CS 351L Project 4: Silos
- * @author Kiana Tarter and Neveah Martinez
+ * @author Kiana Tarter and Nevaeh Martinez
+ *
+ * Holds the full puzzle state: the silo grid, input/output streams,
+ * and the synchronization barrier that keeps all silos in lock-step.
+ *
+ * Also owns the pause/step/stop controls used by the GUI buttons.
  */
 public class Puzzle {
+
+    // ---------------------------------------------------------------
+    // Fields
+    // ---------------------------------------------------------------
+
+    /** Puzzle metadata parsed from the input file. */
     public String title;
     public String description;
+
+    /** The grid of silos, indexed as grid[row][col]. */
     public Silo[][] grid;
+
+    /** Input streams keyed by stream name (e.g. "INPUT.X"). */
     public Map<String, Stream> inputs;
+
+    /** Output streams keyed by stream name (e.g. "OUTPUT.A"). */
     public Map<String, Stream> outputs;
     private int delayMS = 1000;
     private volatile boolean paused = false;
 
 
+    /**
+     * Number of silos currently "active" — i.e. not blocked on a port transfer.
+     * The barrier uses this count to know when all active silos have checked in.
+     * Decremented when a silo blocks on a port, incremented when it unblocks.
+     */
     private AtomicInteger activeSilos;
 
+    // --- barrier state ---
+
+    /** Monitor object for all barrier and pause/step/stop coordination. */
+    private final Object barrierLock = new Object();
+
+    /** How many active silos have arrived at the barrier this generation. */
+    private int silosWaiting = 0;
+
+    /**
+     * Incremented each time the barrier trips.
+     * Silos waiting on an old generation detect the trip by comparing
+     * their snapshot of generation to the current value.
+     */
+    private int generation = 0;
+
+    // --- pause / step / stop flags ---
+
+    /**
+     * When true, awaitBarrier() throws InterruptedException to exit every
+     * silo's run loop cleanly.
+     */
+    private volatile boolean stopped = false;
+
+    /**
+     * When true, the barrier allows exactly one generation through,
+     * then sets paused = true again before releasing silos.
+     * Reset to false automatically after each use.
+     */
+    private volatile boolean stepOnce = false;
+
+
+    // ---------------------------------------------------------------
+    // Constructor
+    // ---------------------------------------------------------------
+
+    /**
+     * Creates a Puzzle and immediately wires neighbors and streams.
+     * Call start() separately when ready to launch silo threads.
+     */
     public Puzzle(String title, String description, Silo[][] grid,
                   Map<String, Stream> inputs, Map<String, Stream> outputs) {
         this.title = title;
@@ -55,8 +116,10 @@ public class Puzzle {
 
 
     /**
-     * Launches each silo on its own thread.
-     * Call this after wireNeighbors() and wireStreams() are done.
+     * Initializes the barrier counter and launches each silo on its own
+     * daemon thread. Silos will immediately begin executing and hitting
+     * the barrier. If pause() was called before start(), they will block
+     * at the first barrier until resume() is called.
      */
     public void start() {
         initBarrier();
@@ -70,19 +133,36 @@ public class Puzzle {
         }
     }
 
-    public void setActiveSilos(AtomicInteger activeSilos) { this.activeSilos = activeSilos; }
-    public AtomicInteger getActiveSilos() { return activeSilos; }
-
-    private final Object barrierLock = new Object();
-    private int silosWaiting = 0;
-    private int generation = 0; // increments each time barrier trips
-
     public void initBarrier() {
         activeSilos = new AtomicInteger(grid.length * grid[0].length);
     }
 
+    // Getters for activeSilos used by Silo.java
+    public void setActiveSilos(AtomicInteger a) { this.activeSilos = a; }
+    public AtomicInteger getActiveSilos()        { return activeSilos; }
+
+
+    // ---------------------------------------------------------------
+    // Barrier
+    // ---------------------------------------------------------------
+
+    /**
+     * Called by every active silo after executing one instruction.
+     * Blocks until all other active silos have also called awaitBarrier(),
+     * then releases them all together for the next instruction.
+     *
+     * Also handles pause and stop:
+     * - If stopped, throws InterruptedException so the silo's run() loop exits.
+     * - If paused, blocks after the barrier trips until resume() or step() wakes it.
+     *
+     * @throws InterruptedException if stop() has been called
+     */
     public void awaitBarrier() throws InterruptedException {
         synchronized (barrierLock) {
+
+            // Exit immediately if the puzzle has been stopped
+            if (stopped) throw new InterruptedException("stopped");
+
             int gen = generation;
 
             // snapshot active count BEFORE incrementing silosWaiting —
@@ -93,7 +173,7 @@ public class Puzzle {
             silosWaiting++;
 
             if (silosWaiting >= needed) {
-                // all active silos are here — trip the barrier
+                // All active silos have arrived — trip the barrier.
                 silosWaiting = 0;
                 generation++;
                 barrierLock.notifyAll();
@@ -140,9 +220,14 @@ public class Puzzle {
     }
 
     /**
-     * Connects input and output streams to their edge silos by figuring out
-     * which silo and which port direction the stream sits next to, then
-     * creates and starts a thread to feed or consume values through that port's queue.
+     * Connects input and output streams to their edge silos.
+     * Each stream's out-of-bounds coordinate tells us which silo and
+     * which port direction it attaches to.
+     *
+     * Input streams get a feeder thread that puts values into the queue.
+     * Output streams get a collector thread that takes values and checks
+     * them against the expected list.
+     *
      * Must be called after wireNeighbors().
      */
     public void wireStreams() {
@@ -183,63 +268,68 @@ public class Puzzle {
             feeder.start();
         }
 
-        // handle output streams — ONE shared collector thread reads all streams in lockstep
-        Thread collector = new Thread(() -> {
-            try {
-                // Create a separate thread for EACH output stream
-                List<Thread> collectorThreads = new ArrayList<>();
+        // --- Output streams: one collector thread per stream ---
+        // Each stream drains independently so fast streams don't
+        // block slow ones (fixes the ordering bug from the single-collector approach).
+        for (Stream stream : outputs.values()) {
+            SynchronousQueue<Integer> queue = resolveQueue(stream);
 
-                for (Stream stream : outputs.values()) {
-                    Thread streamCollector = new Thread(() -> {
-                        try {
-                            int r = stream.row();
-                            int c = stream.col();
-                            Silo silo;
-                            String direction;
+            Thread collector = new Thread(() -> {
+                try {
+                    for (int i = 0; i < stream.values().size(); i++) {
+                        int actual   = queue.take();
+                        int expected = stream.values().get(i);
 
-                            if (r == -1) { silo = grid[0][c]; direction = "UP"; }
-                            else if (r == grid.length) { silo = grid[grid.length-1][c]; direction = "DOWN"; }
-                            else if (c == -1) { silo = grid[r][0]; direction = "LEFT"; }
-                            else { silo = grid[r][grid[0].length-1]; direction = "RIGHT"; }
-
-                            SynchronousQueue<Integer> queue = silo.getQueue(direction);
-
-                            // Collect ALL values for THIS stream
-                            for (int i = 0; i < stream.values().size(); i++) {
-                                int actual = queue.take();
-                                int expected = stream.values().get(i);
-
-                                if (actual == expected) {
-                                    System.out.println("[" + stream.name() + "][" + i + "] correct: " + actual);
-                                } else {
-                                    System.out.println("[" + stream.name() + "][" + i + "] MISMATCH expected=" + expected + " got=" + actual);
-                                }
-                            }
-
-                            System.out.println("[" + stream.name() + "] complete");
-
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
+                        if (actual == expected) {
+                            System.out.println("[" + stream.name() + "][" + i + "] correct: " + actual);
+                        } else {
+                            System.out.println("[" + stream.name() + "][" + i + "] MISMATCH expected="
+                                  + expected + " got=" + actual);
                         }
-                    });
-
-                    streamCollector.setDaemon(true);
-                    streamCollector.start();
-                    collectorThreads.add(streamCollector);
+                    }
+                    System.out.println("[" + stream.name() + "] complete");
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
+            });
+            collector.setDaemon(true);
+            collector.start();
+        }
+    }
 
-                // Wait for all collector threads to finish
-                for (Thread t : collectorThreads) {
-                    t.join();
-                }
+    /**
+     * Resolves which SynchronousQueue a stream connects to, based on its
+     * out-of-bounds coordinate.
+     *
+     * Row == -1 → above the grid → silo (0, col)'s UP port
+     * Row == grid.length → below the grid → silo (last row, col)'s DOWN port
+     * Col == -1 → left of the grid → silo (row, 0)'s LEFT port
+     * Col >= grid width → right of grid → silo (row, last col)'s RIGHT port
+     *
+     * @param stream the stream to resolve
+     * @return the SynchronousQueue for the corresponding silo port
+     */
+    private SynchronousQueue<Integer> resolveQueue(Stream stream) {
+        int r = stream.row();
+        int c = stream.col();
 
-                System.out.println("All streams complete");
+        Silo   silo;
+        String direction;
 
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-        collector.setDaemon(true);
-        collector.start();
+        if (r == -1) {
+            silo = grid[0][c];
+            direction = "UP";
+        } else if (r == grid.length) {
+            silo = grid[grid.length - 1][c];
+            direction = "DOWN";
+        } else if (c == -1) {
+            silo = grid[r][0];
+            direction = "LEFT";
+        } else {
+            silo = grid[r][grid[0].length - 1];
+            direction = "RIGHT";
+        }
+
+        return silo.getQueue(direction);
     }
 }

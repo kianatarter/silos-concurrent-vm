@@ -1,23 +1,40 @@
 package logic;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * CS 351L Project 4: Silos
- * @author Kiana Tarter and Neveah Martinez
+ * @author Kiana Tarter and Nevaeh Martinez
  *
+ * Represents a single virtual machine in the silo grid.
+ * Each silo runs on its own thread, executing its instruction list
+ * in a loop and synchronizing with all other silos via the barrier
+ * in Puzzle after every instruction.
  *
+ * Silos communicate with neighbors through four directional ports
+ * (UP, DOWN, LEFT, RIGHT), each backed by a SynchronousQueue.
+ * Port transfers are blocking rendezvous — both sides must arrive
+ * before either can proceed.
  */
 public class Silo implements Runnable {
+
+    // ---------------------------------------------------------------
+    // Fields
+    // ---------------------------------------------------------------
+
+    /** The parsed instruction list for this silo's program. */
     private List<Instruction> instructions;
+
+    // --- Registers ---
+
+    /** Accumulator. Primary working register. Starts at 0. */
     private int ACC = 0;
+
+    /** Backup register. Cannot be written directly — use SAVE or SWAP. Starts at 0. */
     private int BAK = 0;
+
+    /** Program counter. Index of the next instruction to execute. Starts at 0. */
     private int PC = 0;
     private Simulator callback;
     private int row, col;
@@ -106,8 +123,15 @@ public class Silo implements Runnable {
     }
 
     /**
-     * Constructor for creating a Logic.Silo with instructions
-     * @param instructions the program instructions for a single silo
+     * Reads a value from the given port. Blocks until the neighboring silo
+     * (or input stream feeder) writes to the corresponding port.
+     *
+     * Decrements activeSilos before blocking so the barrier doesn't
+     * wait for this silo while it's idle. The run() loop re-increments
+     * activeSilos after the next barrier trip.
+     *
+     * @param direction "UP", "DOWN", "LEFT", or "RIGHT"
+     * @return the value received, or 0 if interrupted
      */
     public Silo(List<Instruction> instructions){
         this.instructions = instructions;
@@ -152,10 +176,20 @@ public class Silo implements Runnable {
         }
     }
 
+    /**
+     * Writes a value to the given port. Blocks until the neighboring silo
+     * (or output stream collector) reads from the corresponding port.
+     *
+     * Decrements activeSilos before blocking so the barrier doesn't
+     * wait for this silo while it's idle. The run() loop re-increments
+     * activeSilos after the next barrier trip.
+     *
+     * @param direction "UP", "DOWN", "LEFT", or "RIGHT"
+     * @param value the value to send
+     */
     public void writePort(String direction, int value) {
         try {
-            // Decrement before blocking. The run() loop will re-increment
-            // after the barrier once this port transfer completes.
+            // Signal that this silo is now idle (blocked on port)
             puzzle.getActiveSilos().decrementAndGet();
 
             if (callback != null) {
@@ -174,7 +208,21 @@ public class Silo implements Runnable {
         }
     }
 
-    // returns index of the instruction after the label
+
+    // ---------------------------------------------------------------
+    // Label and instruction utilities
+    // ---------------------------------------------------------------
+
+    /**
+     * Finds the index of the instruction immediately after a label.
+     * Labels are stored as instructions with type ":LABEL:", so this
+     * scans the list for a matching type and returns i+1.
+     *
+     * Returns 0 (start of program) if the label is not found.
+     *
+     * @param label the label name without colons (e.g. "START")
+     * @return the PC index to jump to
+     */
     public int labelIndex(String label) {
         for (int i = 0; i < instructions.size(); i++) {
             // Only works for labels like :START: if you dont strip colons
@@ -185,13 +233,26 @@ public class Silo implements Runnable {
         return 0;
     }
 
+    /**
+     * Returns the number of executable instructions (excluding labels).
+     * Used by JRO to compute wrap-around offsets over only real instructions.
+     *
+     * @return count of non-label instructions
+     */
     public int executableCount() {
         return (int) instructions.stream()
               .filter(i -> !i.type().startsWith(":"))
               .count();
     }
 
-    // Returns the queue for a given direction so streams can wire into it directly
+    /**
+     * Returns the SynchronousQueue for the given port direction.
+     * Used by Puzzle.wireStreams() to connect input/output stream threads
+     * directly to a silo's port queue.
+     *
+     * @param direction "UP", "DOWN", "LEFT", or "RIGHT"
+     * @return the queue, or null for an unrecognized direction
+     */
     public SynchronousQueue<Integer> getQueue(String direction) {
         return switch (direction) {
             case "UP" -> upQueue;
