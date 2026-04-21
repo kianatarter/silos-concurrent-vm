@@ -410,7 +410,7 @@ public class MainWindow extends Application implements Simulator {
             List<Label> labels = new ArrayList<>();
             VBox streamDisplay = createStreams(stream.name(),
                   stream.values().stream().mapToInt(i -> i).toArray(),
-                  0, labels);
+                  0, labels, true);
             inputStreamLabels.put(stream.name(), labels);
             inputs.getChildren().add(streamDisplay);
         }
@@ -423,7 +423,7 @@ public class MainWindow extends Application implements Simulator {
             List<Label> labels = new ArrayList<>();
             VBox streamDisplay = createStreams(stream.name(),
                   stream.values().stream().mapToInt(i -> i).toArray(),
-                  0, labels);
+                  0, labels, false);
             outputStreamLabels.put(stream.name(), labels);
             output.getChildren().add(streamDisplay);
         }
@@ -520,7 +520,7 @@ public class MainWindow extends Application implements Simulator {
      * @param currentIndex index of the value to highlight as current
      * @param labels output list — populated with one Label per value
      */
-    private VBox createStreams(String name, int[] values, int currentIndex, List<Label> labels){
+    private VBox createStreams(String name, int[] values, int currentIndex, List<Label> labels, boolean isInput){
         VBox streamBox = new VBox();
         streamBox.getStyleClass().add("stream-box");
 
@@ -533,7 +533,7 @@ public class MainWindow extends Application implements Simulator {
             Label valueLabel = new Label(String.valueOf(values[i]));
             valueLabel.getStyleClass().add("stream-value");
 
-            if (i == currentIndex){
+            if (isInput && i == currentIndex){
                 valueLabel.getStyleClass().add("stream-current");
             }
             valuesList.getChildren().add(valueLabel);

@@ -209,8 +209,6 @@ Neighboring silos share a single `SynchronousQueue<Integer>` per edge. `wireNeig
 
 ## Known Limitations / TODO
 
-- **Delay field** — the text field exists in the UI but is not yet wired into the barrier. Steps execute as fast as the JVM allows.
-- **Live register display** — ACC, BAK, PC, and STATE labels are set once when the grid is built and do not update as the simulation runs.
 - **Live stream highlighting** — the current-value highlight in the streams panel is static.
 - **Arrow transfer animation** — `showTransfer()` is implemented in `MainWindow` but not yet called from `Silo` during port transfers.
 
@@ -250,5 +248,4 @@ Run  2: PASS
 
 ---
 ## Known Bugs
-1. `Stop` button does not work correctly. 
-2. Highlighting of the output stream is highlighted purple when it shouldn't be highlighted.
+1. After attempting to load another test file on the same run, the program may not update GUI components correctly
