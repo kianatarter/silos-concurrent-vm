@@ -81,7 +81,7 @@ public class Silo implements Runnable {
         }
 
         Interpreter interpreter = new Interpreter(this);
-        while (true) {
+        while (!puzzle.isStopped()) {
             while (puzzle.isPaused()) {
                 try {
                     Thread.sleep(50);
@@ -89,6 +89,10 @@ public class Silo implements Runnable {
                     Thread.currentThread().interrupt();
                     return;
                 }
+            }
+
+            if (puzzle.isStopped()){
+                break;
             }
 
             if (PC >= instructions.size()) PC = 0;
@@ -130,7 +134,6 @@ public class Silo implements Runnable {
      * wait for this silo while it's idle. The run() loop re-increments
      * activeSilos after the next barrier trip.
      *
-     * @param direction "UP", "DOWN", "LEFT", or "RIGHT"
      * @return the value received, or 0 if interrupted
      */
     public Silo(List<Instruction> instructions){

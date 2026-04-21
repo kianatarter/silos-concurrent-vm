@@ -321,6 +321,10 @@ public class MainWindow extends Application implements Simulator {
                 return;
             }
 
+            if (puzzle.isStopped()){
+                return;
+            }
+
             if (paused) {
                 paused = false;
                 puzzle.setPaused(false);
@@ -336,6 +340,9 @@ public class MainWindow extends Application implements Simulator {
             if (running) {
                 running = false;
                 paused = false;
+
+                puzzle.setStopped(true);
+                puzzle.setPaused(false);
 
                 if (updateTimer != null) {
                     updateTimer.stop();

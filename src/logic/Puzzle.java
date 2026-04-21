@@ -129,6 +129,13 @@ public class Puzzle {
         return paused;
     }
 
+    public void setStopped (boolean stopped){
+        this.stopped = stopped;
+    }
+
+    public boolean isStopped(){
+        return stopped;
+    }
 
 
     /**
